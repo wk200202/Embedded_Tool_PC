@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Embedded Tools")  # 设置窗口标题
         widgets.titleRightInfo.setText("Setting")  # 设置窗口描述
-        widgets.version.setText("V1.8.0")  # 设置版本号
+        widgets.version.setText("V1.9.0")  # 设置版本号
         # 设置UI功能
         UIFunctions.uiDefinitions(self)
         # 左侧菜单栏按钮

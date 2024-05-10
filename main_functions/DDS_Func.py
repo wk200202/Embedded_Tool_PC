@@ -120,7 +120,7 @@ class DDS_Manager():
     def Pack_WaveData(wave_type, freq, amplitude, duty):
         wavedata, sample_freq = DDS_Manager.DAC_Routine_Calc(wave_type, freq, amplitude, duty)
         data = []
-        print("sample_freq:", sample_freq)
+        # print("sample_freq:", sample_freq)
         data.append(0x64)
         data.append((sample_freq >> 24) & 0xff)
         data.append((sample_freq >> 16) & 0xff)
@@ -128,9 +128,8 @@ class DDS_Manager():
         data.append(sample_freq & 0xff)
 
         for i in wavedata:
-            data.append(i >> 8)
             data.append(i & 0xff)
-
+            data.append(i >> 8)
         return data
 
     '''
@@ -141,17 +140,7 @@ class DDS_Manager():
     '''
     def Pack_WaveData2(data,freq):
         senddata = []
-        wavedata = []
-        # 将字符串转换为列表
         data = data.split(',')
-        # print(data)
-        for i in data:
-            try:
-                wavedata.append(int(i))
-                print(i)
-            except:
-                pass
-        # print(len(wavedata))
         #将波形数据打包成一个字节流，用于发送给MCU,波形数据为uint16_t类型
         senddata.append(0x65)
 
@@ -160,10 +149,12 @@ class DDS_Manager():
         senddata.append((freq >> 8) & 0xff)
         senddata.append(freq & 0xff)
 
-        for i in wavedata:
-            senddata.append(i >> 8)
-            senddata.append(i & 0xff)
-        # print(senddata)
+        for i in data:
+            try:
+                senddata.append(int(i) & 0xff)
+                senddata.append(int(i) >> 8)
+            except:
+                pass
         return senddata
 
     '''

@@ -97,7 +97,7 @@ class TCPServer:
     def send_message_to_client_long(self, message):
         # 传入数据为[]格式,转化为二进制数据发送
         if self.is_running:
-            print(message)
+            # print(message)
             self.ui.te_Setting_Terminal.append('=> Send:\t'+ str(message))
             self.socketThread.send_data_to_client_long(message)
 
@@ -200,13 +200,13 @@ class ServerSocketReceiveThread(QThread):
             command = 21
 
         elif message == "DDS1_Stop":
-            command = 22
+            command = 50
         elif message == "DDS2_Stop":
-            command = 23
+            command = 51
         elif message == "PWM1_Stop":
-            command = 24
+            command = 52
         elif message == "PWM2_Stop":
-            command = 25
+            command = 53
 
         try:
             if command is not None:

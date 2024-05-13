@@ -8,6 +8,7 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
+from PySide6.QtCharts import QChartView
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt)
@@ -26,7 +27,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1602, 900)
+        MainWindow.resize(1635, 900)
         MainWindow.setMinimumSize(QSize(940, 560))
         MainWindow.setMaximumSize(QSize(16777215, 16777215))
         MainWindow.setAutoFillBackground(False)
@@ -2125,6 +2126,8 @@ class Ui_MainWindow(object):
         self.dial_OSC_Horizontal.setObjectName(u"dial_OSC_Horizontal")
         self.dial_OSC_Horizontal.setEnabled(True)
         self.dial_OSC_Horizontal.setMouseTracking(False)
+        self.dial_OSC_Horizontal.setMaximum(6)
+        self.dial_OSC_Horizontal.setPageStep(1)
 
         self.horizontalLayout_57.addWidget(self.dial_OSC_Horizontal)
 
@@ -2214,6 +2217,7 @@ class Ui_MainWindow(object):
         self.dial_OSC_Vertical_CH1.setMaximum(9)
         self.dial_OSC_Vertical_CH1.setSingleStep(1)
         self.dial_OSC_Vertical_CH1.setPageStep(1)
+        self.dial_OSC_Vertical_CH1.setValue(6)
         self.dial_OSC_Vertical_CH1.setTracking(True)
         self.dial_OSC_Vertical_CH1.setWrapping(False)
 
@@ -2225,6 +2229,7 @@ class Ui_MainWindow(object):
         self.dial_OSC_Vertical_CH2.setMouseTracking(False)
         self.dial_OSC_Vertical_CH2.setMaximum(9)
         self.dial_OSC_Vertical_CH2.setPageStep(1)
+        self.dial_OSC_Vertical_CH2.setValue(6)
 
         self.verticalLayout_38.addWidget(self.dial_OSC_Vertical_CH2)
 
@@ -2269,17 +2274,6 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_40.addWidget(self.lb_Port_5)
 
-        self.lb_OSC_Offset_CH1 = QLabel(self.frame_26)
-        self.lb_OSC_Offset_CH1.setObjectName(u"lb_OSC_Offset_CH1")
-        self.lb_OSC_Offset_CH1.setEnabled(False)
-        self.lb_OSC_Offset_CH1.setMinimumSize(QSize(120, 35))
-        self.lb_OSC_Offset_CH1.setStyleSheet(u"border: 0px;\n"
-"font: 18pt \"\u30af\u30ecPro by \u5b81\u9759\u4e4b\u96e8\uff0c\u5fae\u4fe1\u516c\u4f17\u53f7njzyshare\";\n"
-"color: rgb(189, 147, 249);")
-        self.lb_OSC_Offset_CH1.setAlignment(Qt.AlignCenter)
-
-        self.verticalLayout_40.addWidget(self.lb_OSC_Offset_CH1)
-
         self.verticalSpacer_5 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout_40.addItem(self.verticalSpacer_5)
@@ -2294,16 +2288,9 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_40.addWidget(self.lb_Port_6)
 
-        self.lb_OSC_Offset_CH2 = QLabel(self.frame_26)
-        self.lb_OSC_Offset_CH2.setObjectName(u"lb_OSC_Offset_CH2")
-        self.lb_OSC_Offset_CH2.setEnabled(False)
-        self.lb_OSC_Offset_CH2.setMinimumSize(QSize(120, 35))
-        self.lb_OSC_Offset_CH2.setStyleSheet(u"border: 0px;\n"
-"font: 18pt \"\u30af\u30ecPro by \u5b81\u9759\u4e4b\u96e8\uff0c\u5fae\u4fe1\u516c\u4f17\u53f7njzyshare\";\n"
-"color: rgb(189, 147, 249);")
-        self.lb_OSC_Offset_CH2.setAlignment(Qt.AlignCenter)
+        self.verticalSpacer_6 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-        self.verticalLayout_40.addWidget(self.lb_OSC_Offset_CH2)
+        self.verticalLayout_40.addItem(self.verticalSpacer_6)
 
 
         self.horizontalLayout_66.addLayout(self.verticalLayout_40)
@@ -2314,8 +2301,9 @@ class Ui_MainWindow(object):
         self.dial_OSC_Offset_CH1.setObjectName(u"dial_OSC_Offset_CH1")
         self.dial_OSC_Offset_CH1.setEnabled(True)
         self.dial_OSC_Offset_CH1.setMouseTracking(False)
-        self.dial_OSC_Offset_CH1.setMaximum(200)
+        self.dial_OSC_Offset_CH1.setMaximum(400)
         self.dial_OSC_Offset_CH1.setPageStep(10)
+        self.dial_OSC_Offset_CH1.setValue(200)
 
         self.verticalLayout_41.addWidget(self.dial_OSC_Offset_CH1)
 
@@ -2323,7 +2311,8 @@ class Ui_MainWindow(object):
         self.dial_OSC_Offset_CH2.setObjectName(u"dial_OSC_Offset_CH2")
         self.dial_OSC_Offset_CH2.setEnabled(True)
         self.dial_OSC_Offset_CH2.setMouseTracking(False)
-        self.dial_OSC_Offset_CH2.setMaximum(200)
+        self.dial_OSC_Offset_CH2.setMaximum(400)
+        self.dial_OSC_Offset_CH2.setValue(200)
 
         self.verticalLayout_41.addWidget(self.dial_OSC_Offset_CH2)
 
@@ -2518,7 +2507,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_10.addLayout(self.horizontalLayout_34)
 
-        self.Chart_UART = QWidget(self.frame_12)
+        self.Chart_UART = QChartView(self.frame_12)
         self.Chart_UART.setObjectName(u"Chart_UART")
         self.Chart_UART.setMinimumSize(QSize(200, 700))
         self.Chart_UART.setStyleSheet(u"border-radius: 5px;\n"
@@ -2568,32 +2557,6 @@ class Ui_MainWindow(object):
         self.horizontalLayout_40.setObjectName(u"horizontalLayout_40")
         self.verticalLayout_12 = QVBoxLayout()
         self.verticalLayout_12.setObjectName(u"verticalLayout_12")
-        self.horizontalLayout_13 = QHBoxLayout()
-        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
-        self.lb_Port = QLabel(self.frame_5)
-        self.lb_Port.setObjectName(u"lb_Port")
-        self.lb_Port.setEnabled(False)
-        self.lb_Port.setMinimumSize(QSize(120, 35))
-        self.lb_Port.setStyleSheet(u"font: 14pt \"\u30af\u30ecPro by \u5b81\u9759\u4e4b\u96e8\uff0c\u5fae\u4fe1\u516c\u4f17\u53f7njzyshare\";")
-        self.lb_Port.setAlignment(Qt.AlignCenter)
-
-        self.horizontalLayout_13.addWidget(self.lb_Port)
-
-        self.com_Port = QComboBox(self.frame_5)
-        self.com_Port.setObjectName(u"com_Port")
-        self.com_Port.setMinimumSize(QSize(120, 35))
-        self.com_Port.setCursor(QCursor(Qt.PointingHandCursor))
-        self.com_Port.setStyleSheet(u" QComboBox QAbstractItemView{\n"
-"	background-color: rgb(33, 37, 43);\n"
-"    border-radius:5px 5px 5px 5px;\n"
-"	font-size:14px;\n"
-" }")
-
-        self.horizontalLayout_13.addWidget(self.com_Port)
-
-
-        self.verticalLayout_12.addLayout(self.horizontalLayout_13)
-
         self.horizontalLayout_14 = QHBoxLayout()
         self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
         self.lb_Baud = QLabel(self.frame_5)
@@ -2794,7 +2757,7 @@ class Ui_MainWindow(object):
 
         self.te_UART_RecTerminal = QTextEdit(self.frame_4)
         self.te_UART_RecTerminal.setObjectName(u"te_UART_RecTerminal")
-        self.te_UART_RecTerminal.setEnabled(False)
+        self.te_UART_RecTerminal.setEnabled(True)
         sizePolicy3.setHeightForWidth(self.te_UART_RecTerminal.sizePolicy().hasHeightForWidth())
         self.te_UART_RecTerminal.setSizePolicy(sizePolicy3)
         self.te_UART_RecTerminal.setMinimumSize(QSize(200, 150))
@@ -3577,7 +3540,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.stackedWidget.setCurrentIndex(3)
+        self.stackedWidget.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -3800,9 +3763,7 @@ class Ui_MainWindow(object):
         self.lb_OSC_Vertical_CH2.setText(QCoreApplication.translate("MainWindow", u"100mV/div", None))
         self.lb_Port_4.setText(QCoreApplication.translate("MainWindow", u"\u7535\u5e73\u504f\u79fb", None))
         self.lb_Port_5.setText(QCoreApplication.translate("MainWindow", u"CH1", None))
-        self.lb_OSC_Offset_CH1.setText(QCoreApplication.translate("MainWindow", u"0.00V", None))
         self.lb_Port_6.setText(QCoreApplication.translate("MainWindow", u"CH2", None))
-        self.lb_OSC_Offset_CH2.setText(QCoreApplication.translate("MainWindow", u"0.00V", None))
         self.lb_Port_16.setText(QCoreApplication.translate("MainWindow", u"\u89e6\u53d1\u901a\u9053", None))
         self.com_Trigger_Channal.setItemText(0, QCoreApplication.translate("MainWindow", u"CH1", None))
         self.com_Trigger_Channal.setItemText(1, QCoreApplication.translate("MainWindow", u"CH2", None))
@@ -3820,10 +3781,6 @@ class Ui_MainWindow(object):
         self.btn_Screenshot.setText(QCoreApplication.translate("MainWindow", u"\u622a\u56fe", None))
         self.btn_Run_Stop.setText(QCoreApplication.translate("MainWindow", u"\u8fd0\u884c/\u6682\u505c", None))
         self.info_text_7.setText(QCoreApplication.translate("MainWindow", u"Chart", None))
-        self.lb_Port.setText(QCoreApplication.translate("MainWindow", u"Serial Port", None))
-#if QT_CONFIG(tooltip)
-        self.com_Port.setToolTip(QCoreApplication.translate("MainWindow", u"\u7aef\u53e3\u9009\u62e9", None))
-#endif // QT_CONFIG(tooltip)
         self.lb_Baud.setText(QCoreApplication.translate("MainWindow", u"Baud Rate", None))
         self.com_Baud.setItemText(0, QCoreApplication.translate("MainWindow", u"1200", None))
         self.com_Baud.setItemText(1, QCoreApplication.translate("MainWindow", u"9600", None))

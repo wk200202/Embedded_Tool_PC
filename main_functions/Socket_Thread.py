@@ -12,11 +12,12 @@ from PySide6.QtCore import QThread, Signal
 
 class TCPServer:
 
-    def __init__(self, ui, server_ip, server_port,OSC_thread):
+    def __init__(self, ui, server_ip, server_port,OSC_thread,uart_thread):
 
         self.ui = ui  # 主界面
         self.ip = server_ip  # 服务器ip地址
         self.OSC_thread = OSC_thread
+        self.uart_thread = uart_thread
         self.port = server_port  # 服务器端口号
         self.is_running = False  # 是否已经启动
 
@@ -36,7 +37,7 @@ class TCPServer:
         self.ring_buffer = RingBuffer(1024 * 1024 * 10)  # 环形缓冲区大小
 
         # 启动数据解析线程
-        self.parsing_thread = ParsingThread(self.ring_buffer, self.OSC_thread)
+        self.parsing_thread = ParsingThread(self.ring_buffer, self.OSC_thread,self.uart_thread)
         self.parsing_thread.start()
 
         self.start()
@@ -198,6 +199,20 @@ class ServerSocketReceiveThread(QThread):
             command = 20
         elif message == "CH2增益1/100":
             command = 21
+        elif message == "水平缩放10us/div":
+            command = 22
+        elif message == "水平缩放20us/div":
+            command = 23
+        elif message == "水平缩放50us/div":
+            command = 24
+        elif message == "水平缩放100us/div":
+            command = 25
+        elif message == "水平缩放200us/div":
+            command = 26
+        elif message == "水平缩放500us/div":
+            command = 27
+        elif message == "水平缩放1ms/div":
+            command = 28
 
         elif message == "DDS1_Stop":
             command = 50
@@ -207,6 +222,13 @@ class ServerSocketReceiveThread(QThread):
             command = 52
         elif message == "PWM2_Stop":
             command = 53
+
+        elif message == "OpenOSC":
+            command = 200
+        elif message == "OpenUART":
+            command = 201
+        elif message == "OpenDDS":
+            command = 202
 
         try:
             if command is not None:
@@ -284,10 +306,11 @@ class RingBuffer:
 
 
 class ParsingThread(threading.Thread):
-    def __init__(self, ring_buffer, osc_thread):
+    def __init__(self, ring_buffer, osc_thread, uart_thread):
         super(ParsingThread, self).__init__()
         self.ring_buffer = ring_buffer
         self.osc_thread = osc_thread
+        self.uart_thread = uart_thread
         self.running = True
         self.last_tail_index = self.ring_buffer.head
 
@@ -296,15 +319,18 @@ class ParsingThread(threading.Thread):
 
     def run(self):
         while self.running:
-            try:
-                data = self.find_and_parse_frame()
-                if data:
-                    # 根据数据类型处理数据
-                    if data['type'] == 0x02:  # 与OSC界面相关
-                        MCU_Format.OSC_data_format(data['content'], self.osc_thread)
-                #     # 处理其他类型...
-            except Exception as e:
-                print(f"Error parsing frame: {e}")
+            # 判断是否有数据
+            while(self.ring_buffer.available() > 4):
+                try:
+                    data = self.find_and_parse_frame()
+                    if data:
+                        # 根据数据类型处理数据
+                        if data['type'] == 0x02:  # 与OSC界面相关
+                            MCU_Format.OSC_data_format(data['content'], self.osc_thread)
+                        elif data['type'] == 0x03:  # 与UART界面相关
+                            MCU_Format.UART_data_format(data['content'], self.uart_thread)
+                except Exception as e:
+                    print(f"Error parsing frame: {e}")
 
     def find_and_parse_frame(self):
         if self.ring_buffer.available() > 4:  # 确保有足够的数据进行搜索
@@ -315,7 +341,7 @@ class ParsingThread(threading.Thread):
                 return None
 
             # 从帧头位置开始搜索帧尾
-            self.tail_index = self.ring_buffer.buffer.find(b'\xAA\x55', self.head_index + 1024 * 5)  # 从帧头之后的位置开始搜索
+            self.tail_index = self.ring_buffer.buffer.find(b'\xAA\x55', self.head_index + 2)  # 从帧头之后的位置开始搜索
             if self.tail_index == -1:
                 return None
 
@@ -369,8 +395,41 @@ class MCU_Format():
                         (ch1_byte & 0x08) << 1) | (
                                (ch1_byte & 0x10) >> 1) | ((ch1_byte & 0x20) >> 3) | ((ch1_byte & 0x40) >> 5) | (
                                    (ch1_byte & 0x80) >> 7)
-            ch1_byte = ch1_data - 128
+            ch1_byte = ch1_data - 128 + 4
             CH1_data.append(ch1_byte)
+        if osc_thread.runflag == 1:
+            osc_thread.UpdateWaveData(CH1_data, 1)
+            osc_thread.UpdateWaveData(CH2_data, 2)
 
-        osc_thread.UpdateWaveData(CH1_data, 1)
-        osc_thread.UpdateWaveData(CH2_data, 2)
+    @staticmethod
+    def UART_data_format(data_content, uart_thread):
+        '''
+        将接收的数据解析出data1,data2,data3,data4
+        MCU的发送格式为：%d,%d,%d,%d\r\n
+        以\n为结束符，以逗号分隔
+        若传入数据不包含\n，则放入缓存区，等待下一次数据到来，再进行解析
+        '''
+        # 将bytearray转为str
+        data_str = data_content.decode()
+
+        # 若数据不包含\n，则放入缓存区，并将缓存区转换为字符串
+        if '\n' not in data_str:
+            if uart_thread.buffer:
+                # 将缓存区的数据转换为字符串
+                uart_thread.buffer_str += ''.join(uart_thread.buffer)
+                # 清空缓存区
+                uart_thread.buffer = []
+            # 将当前数据添加到缓存区字符串
+            uart_thread.buffer_str += data_str
+        else:
+            # 若数据包含\n，则将缓存区数据和当前数据合并
+            # 将缓存区字符串和当前数据字符串合并
+            full_data_str = uart_thread.buffer_str + data_str
+            # 将合并后的字符串按照逗号分隔
+            full_data_list = full_data_str.split(',')
+            # 清空缓存区字符串
+            uart_thread.buffer_str = ''
+            # 将数据转为int
+            data_ints = list(map(int, full_data_list))
+            # 绘制数据
+            uart_thread.UART_seriesUpdate(data_ints[0], data_ints[1], data_ints[2], data_ints[3])

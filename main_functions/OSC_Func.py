@@ -7,16 +7,36 @@ import sys
 import numpy as np
 
 # 垂直电压缩放，共10档,二维数组，第一维为显示字符，第二维为对应的波形缩放倍数,第三维为电压计算系数
-osc_vol_scale = [["10mV/div", 10, 0.01, "10"],
-                 ["20mV/div", 5, 0.02, "5"],
-                 ["50mV/div", 2, 0.05, "2"],
-                 ["100mV/div", 1, 0.1, "1"],
-                 ["200mV/div", 0.5, 0.2, "1/2"],
-                 ["500mV/div", 0.2, 0.5, "1/5"],
-                 ["1V/div", 0.1, 1, "1/10"],
-                 ["2V/div", 0.05, 2, "1/20"],
-                 ["5V/div", 0.02, 5, "1/50"],
-                 ["10V/div", 0.01, 10, "1/100"]]
+osc_vol_scale = [["10mV/div",   10,     0.1,    "10"],
+                 ["20mV/div",   5,      0.2,    "5"],
+                 ["50mV/div",   2,      0.5,    "2"],
+                 ["100mV/div",  1,      1,      "1"],
+                 ["200mV/div",  0.5,    2,      "1/2"],
+                 ["500mV/div",  0.2,    5,      "1/5"],
+                 ["1V/div",     0.1,    10,     "1/10"],
+                 ["2V/div",     0.05,   20,     "1/20"],
+                 ["5V/div",     0.02,   50,     "1/50"],
+                 ["10V/div",    0.01,   100,    "1/100"]]
+'''
+水平时间基准计算
+水平像素点100每格
+若10M采样率，则一格10us
+若5M采样率，则一格20us
+若2M采样率，则一格50us
+若1M采样率，则一格100us
+若500K采样率，则一格200us
+若200K采样率，则一格500us
+若100K采样率，则一格1ms
+'''
+# 水平时间基准，共7档,二维数组，第一维为显示字符，第二维为对应的采样率
+osc_time_scale = [["10us/div",   10000000],
+                    ["20us/div",   5000000],
+                    ["50us/div",   2000000],
+                    ["100us/div",  1000000],
+                    ["200us/div",  500000],
+                    ["500us/div",  200000],
+                    ["1ms/div",    100000]]
+
 
 
 class OscillographWidget(QWidget):
@@ -33,6 +53,8 @@ class OscillographWidget(QWidget):
             "border-radius: 5px;border: 2px solid rgb(98, 98, 98);background-color: rgb(0, 0, 0);")
         self.ui = ui
         self.ui.Slider_WaveHorzontal.setValue(50)  # 滑块默认位置中间
+        self.ui.dial_OSC_Offset_CH1.setValue(200)  # 通道1垂直偏移默认位置中间
+        self.ui.dial_OSC_Offset_CH2.setValue(200)  # 通道2垂直偏移默认位置中间
 
         self.waveDataLength = 1024 * 20    # 波形数据长度
         # 分配波形数据缓冲区
@@ -44,12 +66,23 @@ class OscillographWidget(QWidget):
         # 通道显示状态
         self.channelDisplayCH1 = True
         self.channelDisplayCH2 = True
+        # 记录屏幕显示区域的序列左右边界
+        self.waveDataStartIndex = 0
+        self.waveDataEndIndex = self.waveDataLength
 
         # FFT相关设置
         self.FFTLength = 2048                   # FFT长度
         self.FFTData = [0] * self.FFTLength     # 分配FFT数据缓冲区
+        self.FFTData2 = [0] * self.FFTLength    # 分配FFT数据缓冲区2
         self.FFTColor = QColor(189, 147, 249)   # FFT波形颜色
         self.FFTflag = False                    # FFT模式标志
+        self.FFTflag2 = False                   # FFT模式标志2,进程间互锁
+
+        self.CH1_Freq = 0                       # 通道1频率
+        self.CH2_Freq = 0                       # 通道2频率
+
+        self.VerticalOffset_CH1 = self.ui.dial_OSC_Offset_CH1.value() - 200 # 通道1垂直偏移
+        self.VerticalOffset_CH2 = self.ui.dial_OSC_Offset_CH2.value() - 200 # 通道2垂直偏移
 
         self.channelNumber = number                             # 通道个数
         self.trogglecnt = 1024 * 10                                 # 默认的触发点偏移量
@@ -79,26 +112,23 @@ class OscillographWidget(QWidget):
         self.worker.stop()
 
     def update_wave_data(self):
-        # 这里获取新的波形数据
-        # ... 模拟获取波形数据 ...
         # 然后重绘窗口以显示新数据
-        if self.runflag == 1:       # 若运行则更新波形数据
+        # if self.runflag == 1:       # 若运行则更新波形数据
             # self.TestSinWave()
-            self.findTrigger()
-            self.displayMeasure()
+            # self.findTrigger()
+            # self.displayMeasure()
 
         self.repaint()
         # print("update_wave_data")
 
     def paintEvent(self, event):
-        super().paintEvent(event)
+        # super().paintEvent(event)
         self.drawFrame()
+        self.drawWave()
         if self.runflag == 1:
-            self.drawWave()
             self.drawFFT()
-        if self.triggerLevelflag != False:
-            self.drawTriggerLine()
-        # self.displayMeasure()
+            if self.triggerLevelflag == True:
+                self.drawTriggerLine()
 
     '''
     绘制触发线
@@ -184,21 +214,19 @@ class OscillographWidget(QWidget):
     '''
     绘制网格
     '''
-
     def drawFrame(self):
 
         # 获取窗口的宽度和高度
         width = self.parent.width()  # 使用父窗口的宽度
         height = self.parent.height()  # 使用父窗口的高度
         self.setMinimumSize(width, height)
-        # print("OSC width: ", width, " height: ", height)
 
         # 开始绘制
         painter = QPainter(self)
 
         # 设置绘制网格的间隔
-        dx = 64
-        dy = 64
+        dx = 100
+        dy = 100
 
         # 以窗口中心为原点绘制坐标轴
         pen = QPen(QColor(96, 96, 96), 4, Qt.SolidLine)
@@ -224,9 +252,6 @@ class OscillographWidget(QWidget):
         # 从窗口中心向下绘制
         for y in range(int(height / 2), height, dy):
             painter.drawLine(0, y, width, y)
-
-        # 结束绘制
-        # painter.end()
 
     '''
     波形数据更新API
@@ -273,20 +298,16 @@ class OscillographWidget(QWidget):
             # 向左绘制
             for i in range(0, start, 1):
                 x1 = i
-                y1 = int(dispHeight / 2 -
-                         self.waveDataCH1[self.triggerIndex - start + i] * 2)
+                y1 = int(dispHeight / 2 - self.waveDataCH1[self.triggerIndex - start + i] * 2) + self.VerticalOffset_CH1
                 x2 = i + 1
-                y2 = int(dispHeight / 2 -
-                         self.waveDataCH1[self.triggerIndex - start + i + 1] * 2)
+                y2 = int(dispHeight / 2 - self.waveDataCH1[self.triggerIndex - start + i + 1] * 2) + self.VerticalOffset_CH1
                 painter.drawLine(x1, y1, x2, y2)
             # 向右绘制
             for i in range(start, dispWidth, 1):
                 x1 = i
-                y1 = int(dispHeight / 2 -
-                         self.waveDataCH1[self.triggerIndex - start + i] * 2)
+                y1 = int(dispHeight / 2 - self.waveDataCH1[self.triggerIndex - start + i] * 2) + self.VerticalOffset_CH1
                 x2 = i + 1
-                y2 = int(dispHeight / 2 -
-                         self.waveDataCH1[self.triggerIndex - start + i + 1] * 2)
+                y2 = int(dispHeight / 2 - self.waveDataCH1[self.triggerIndex - start + i + 1] * 2) + self.VerticalOffset_CH1
                 painter.drawLine(x1, y1, x2, y2)
 
         if self.channelDisplayCH2:
@@ -298,27 +319,33 @@ class OscillographWidget(QWidget):
             # 向左绘制
             for i in range(0, start, 1):
                 x1 = i
-                y1 = int(dispHeight / 2 -
-                         self.waveDataCH2[self.triggerIndex - start + i] * 2)
+                y1 = int(dispHeight / 2 - self.waveDataCH2[self.triggerIndex - start + i] * 2) + self.VerticalOffset_CH2
                 x2 = i + 1
-                y2 = int(dispHeight / 2 -
-                         self.waveDataCH2[self.triggerIndex - start + i + 1] * 2)
+                y2 = int(dispHeight / 2 - self.waveDataCH2[self.triggerIndex - start + i + 1] * 2) + self.VerticalOffset_CH2
                 painter.drawLine(x1, y1, x2, y2)
             # 向右绘制
             for i in range(start, dispWidth, 1):
                 x1 = i
-                y1 = int(dispHeight / 2 -
-                         self.waveDataCH2[self.triggerIndex - start + i] * 2)
+                y1 = int(dispHeight / 2 - self.waveDataCH2[self.triggerIndex - start + i] * 2) + self.VerticalOffset_CH2
                 x2 = i + 1
-                y2 = int(dispHeight / 2 -
-                         self.waveDataCH2[self.triggerIndex - start + i + 1] * 2)
+                y2 = int(dispHeight / 2 - self.waveDataCH2[self.triggerIndex - start + i + 1] * 2) + self.VerticalOffset_CH2
                 painter.drawLine(x1, y1, x2, y2)
 
+        self.waveDataStartIndex = self.triggerIndex - start
+        self.waveDataEndIndex = self.triggerIndex + dispWidth - start
         # painter.end()
 
-    def drawFFT(self):
+    def CalcFFT(self):
+        # 用于更新FFT数据，减少主线程负担
         if (self.FFTflag == 1):
-            self.FFTData = np.fft.rfft(self.waveDataCH2)
+            self.FFTData = np.fft.rfft(self.waveDataCH1)
+            self.FFTflag2 = 1
+        else:
+            self.FFTflag2 = 0
+
+    def drawFFT(self):
+        if (self.FFTflag2 == 1):
+            # self.FFTData = np.fft.rfft(self.waveDataCH1)
             FFTWidth = self.parent.width()
             FFTHeight = self.parent.height()
 
@@ -344,14 +371,10 @@ class OscillographWidget(QWidget):
                 x2 = int((i + 1) * FFTWidth / num_display_points)
                 y2 = int(FFTHeight - abs(self.FFTData[i + 1]) * scale_factor)
                 painter.drawLine(x1, y1, x2, y2)
-        else:
-            # 清零
-            self.FFTData = np.zeros(self.waveDataLength)
 
     '''
     刷新测量数据
     '''
-
     def displayMeasure(self):
         # 获取com_CH1_Date1现在序列Index
         tag = self.ui.com_CH1_Date1.currentIndex()
@@ -389,49 +412,95 @@ class OscillographWidget(QWidget):
             if tag == 0:
                 return "------------"
             elif tag == 1:  # Vpp
-                return self.getVpp(self.waveDataCH1)
+                return self.getVpp(self.waveDataCH1, 1)
             elif tag == 2:  # Freq
-                return self.getFreq(self.waveDataCH1)
+                return self.getFreq(self.waveDataCH1, 1)
             elif tag == 3:  # Max
-                return self.getMax(self.waveDataCH1)
+                return self.getMax(self.waveDataCH1, 1)
             elif tag == 4:  # Min
-                return self.getMin(self.waveDataCH1)
+                return self.getMin(self.waveDataCH1, 1)
             elif tag == 5:  # Mean
-                return self.getMean(self.waveDataCH1)
+                return self.getMean(self.waveDataCH1, 1)
             elif tag == 6:  # RMS
-                return self.getRMS(self.waveDataCH1)
+                return self.getRMS(self.waveDataCH1, 1)
         else:
             if tag == 0:
                 return "------------"
             elif tag == 1:
-                return self.getVpp(self.waveDataCH2)
+                return self.getVpp(self.waveDataCH2,2)
             elif tag == 2:
-                return self.getFreq(self.waveDataCH2)
+                return self.getFreq(self.waveDataCH2,2)
             elif tag == 3:
-                return self.getMax(self.waveDataCH2)
+                return self.getMax(self.waveDataCH2,2)
             elif tag == 4:
-                return self.getMin(self.waveDataCH2)
+                return self.getMin(self.waveDataCH2,2)
             elif tag == 5:
-                return self.getMean(self.waveDataCH2)
+                return self.getMean(self.waveDataCH2,2)
             elif tag == 6:
-                return self.getRMS(self.waveDataCH2)
+                return self.getRMS(self.waveDataCH2,2)
 
-    def getVpp(self, data):
-        return str(round(max(data) - min(data), 3))
+    def getVpp(self, data,chn):
+        if chn == 1:
+            count = self.ui.dial_OSC_Vertical_CH1.value()
+        else:
+            count = self.ui.dial_OSC_Vertical_CH2.value()
+        # 只检测屏幕显示的波形
+        start = self.waveDataStartIndex
+        end = self.waveDataEndIndex
+        print("max", max(data[start:end]))
+        print("min", min(data[start:end]))
 
-    def getFreq(self, data):
-        # 通过FFT计算频率
-        # 采样频率固定100MHz
-        fftoutput = np.fft.rfft(data)
-        fftoutput = np.abs(fftoutput)
-        maxindex = np.argmax(fftoutput)
-        return str(round(maxindex * 100 / len(data), 3))
+        return str((max(data[start:end]) - min(data[start:end]))* (1 / 255) * osc_vol_scale[count][2])
+
+    def getMax(self, data, chn):
+        if chn == 1:
+            count = self.ui.dial_OSC_Vertical_CH1.value()
+        else:
+            count = self.ui.dial_OSC_Vertical_CH2.value()
+        start = self.waveDataStartIndex
+        end = self.waveDataEndIndex
+        return str(max(data[start:end]) * (1 / 255) * osc_vol_scale[count][2])
+
+    def getMin(self, data, chn):
+        if chn == 1:
+            count = self.ui.dial_OSC_Vertical_CH1.value()
+        else:
+            count = self.ui.dial_OSC_Vertical_CH2.value()
+        start = self.waveDataStartIndex
+        end = self.waveDataEndIndex
+        return str(min(data[start:end]) * (1 / 255) * osc_vol_scale[count][2])
+
+    def getMean(self, data, chn):
+        if chn == 1:
+            count = self.ui.dial_OSC_Vertical_CH1.value()
+        else:
+            count = self.ui.dial_OSC_Vertical_CH2.value()
+        start = self.waveDataStartIndex
+        end = self.waveDataEndIndex
+        return str(np.mean(data[start:end]) * (1 / 255) * osc_vol_scale[count][2])
+
+    def getRMS(self, data, chn):
+        if chn == 1:
+            count = self.ui.dial_OSC_Vertical_CH1.value()
+        else:
+            count = self.ui.dial_OSC_Vertical_CH2.value()
+        start = self.waveDataStartIndex
+        end = self.waveDataEndIndex
+        return str(np.sqrt(np.mean(np.square(data[start:end])))* (1 / 255) * osc_vol_scale[count][2])
+
+    def getFreq(self, data, chn):
+        if chn == 1:
+            # 通过FFT得到频率
+            Freq = np.fft.fftfreq(len(data), 1 / 10000000)
+        else:
+            Freq = np.fft.fftfreq(len(data), 1 / 10000000)
+        return
+
 
     # ///////////////////////////////////////////////////////////////
     '''
     btn_OSC_FFT按钮事件
     '''
-
     def FFTmode(self):
         print("FFT button clicked")
         if (self.FFTflag == 0):
@@ -543,7 +612,6 @@ class OscillographWidget(QWidget):
     '''
     dial_OSC_Vertical_CH2按钮事件
     '''
-
     def setCH2_Vscale(self):
         print("dial_OSC_Vertical_CH2 button clicked")
         count = self.ui.dial_OSC_Vertical_CH2.value()
@@ -551,42 +619,36 @@ class OscillographWidget(QWidget):
         self.main.server.send_message_to_client("CH2增益" + osc_vol_scale[count][3])
         self.ui.lb_OSC_Vertical_CH2.setText(osc_vol_scale[count][0])
 
-    # def TestSinWave(self):
-    #     # 清空waveDataCH1和waveDataCH2
-    #     self.waveDataCH1 = []
-    #     self.waveDataCH2 = []
-    #
-    #     if self.testflag == 0:
-    #         for i in range(0, self.waveDataLength):
-    #             # 通道1正弦波 + 叠加随机噪声,要求每次生成的波形数据不同,范围-128 - 127 之间
-    #             self.waveDataCH1.append(
-    #                 int(127 * math.sin(i/20) + random.randint(-1, 1)))
-    #             # 通道2方波10HZ+叠加随机噪声,要求每次生成的波形数据不同
-    #             self.waveDataCH2.append(int(
-    #                 127 + random.uniform(-5, 0) if math.sin(i / 20) > 0 else -128 + random.uniform(0, 5)))
-    #         self.testflag = 1
-    #     else:
-    #         # 产生一个与上面相位相差90度的波形，用于判断触发的可靠性
-    #         for i in range(0, self.waveDataLength):
-    #             # 通道1正弦波 + 叠加随机噪声,要求每次生成的波形数据不同,范围-128 - 127 之间
-    #             self.waveDataCH1.append(
-    #                 int(127 * math.cos(i/20) + random.randint(-1, 1)))
-    #             # 通道2方波10HZ+叠加随机噪声,要求每次生成的波形数据不同
-    #             self.waveDataCH2.append(int(
-    #                 127 + random.uniform(-5, 0) if math.cos(i / 20) > 0 else -128 + random.uniform(0, 5)))
-    #         self.testflag = 0
+    def setCH1_Offset(self):
+        self.VerticalOffset_CH1 = self.ui.dial_OSC_Offset_CH1.value() - 200  # 通道1垂直偏移
 
+    def setCH2_Offset(self):
+        self.VerticalOffset_CH2 = self.ui.dial_OSC_Offset_CH2.value() - 200
+
+    def setHorizontal(self):
+        # 获取当前value值
+        count = self.ui.dial_OSC_Horizontal.value()
+        try:
+            self.main.server.send_message_to_client("水平缩放" + osc_time_scale[count][0])
+        except:
+            pass
+        self.ui.lb_OSC_Horizontal.setText(osc_time_scale[count][0])
 
 class WorkerThread(QThread):
     trigger_repaint = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, oscillograph_widget, parent=None):
         super().__init__(parent)
+        self.oscillograph_widget = oscillograph_widget
         self.running = True
 
     def run(self):
         while self.running:
             # 当波形数据更新时，发出信号
+            if self.oscillograph_widget.runflag == 1:
+                self.oscillograph_widget.CalcFFT()
+                self.oscillograph_widget.findTrigger()
+            self.oscillograph_widget.displayMeasure()
             self.trigger_repaint.emit()
             # 模拟工作间隔
             self.msleep(200)   # 100ms 工作间隔

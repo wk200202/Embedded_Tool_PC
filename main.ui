@@ -7,7 +7,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1602</width>
+    <width>1635</width>
     <height>900</height>
    </rect>
   </property>
@@ -1400,7 +1400,7 @@ font: 14pt &quot;クレPro by 宁静之雨，微信公众号njzyshare&quot;;</st
                       <string notr="true">background: transparent;</string>
                      </property>
                      <property name="currentIndex">
-                      <number>3</number>
+                      <number>1</number>
                      </property>
                      <widget class="QWidget" name="Page_Setting">
                       <property name="styleSheet">
@@ -4144,6 +4144,12 @@ color: rgb(189, 147, 249);</string>
                                      <property name="mouseTracking">
                                       <bool>false</bool>
                                      </property>
+                                     <property name="maximum">
+                                      <number>6</number>
+                                     </property>
+                                     <property name="pageStep">
+                                      <number>1</number>
+                                     </property>
                                     </widget>
                                    </item>
                                   </layout>
@@ -4319,6 +4325,9 @@ color: rgb(189, 147, 249);</string>
                                        <property name="pageStep">
                                         <number>1</number>
                                        </property>
+                                       <property name="value">
+                                        <number>6</number>
+                                       </property>
                                        <property name="tracking">
                                         <bool>true</bool>
                                        </property>
@@ -4340,6 +4349,9 @@ color: rgb(189, 147, 249);</string>
                                        </property>
                                        <property name="pageStep">
                                         <number>1</number>
+                                       </property>
+                                       <property name="value">
+                                        <number>6</number>
                                        </property>
                                       </widget>
                                      </item>
@@ -4414,30 +4426,6 @@ font: 14pt &quot;クレPro by 宁静之雨，微信公众号njzyshare&quot;;</st
                                       </widget>
                                      </item>
                                      <item>
-                                      <widget class="QLabel" name="lb_OSC_Offset_CH1">
-                                       <property name="enabled">
-                                        <bool>false</bool>
-                                       </property>
-                                       <property name="minimumSize">
-                                        <size>
-                                         <width>120</width>
-                                         <height>35</height>
-                                        </size>
-                                       </property>
-                                       <property name="styleSheet">
-                                        <string notr="true">border: 0px;
-font: 18pt &quot;クレPro by 宁静之雨，微信公众号njzyshare&quot;;
-color: rgb(189, 147, 249);</string>
-                                       </property>
-                                       <property name="text">
-                                        <string>0.00V</string>
-                                       </property>
-                                       <property name="alignment">
-                                        <set>Qt::AlignCenter</set>
-                                       </property>
-                                      </widget>
-                                     </item>
-                                     <item>
                                       <spacer name="verticalSpacer_5">
                                        <property name="orientation">
                                         <enum>Qt::Vertical</enum>
@@ -4474,28 +4462,17 @@ font: 14pt &quot;クレPro by 宁静之雨，微信公众号njzyshare&quot;;</st
                                       </widget>
                                      </item>
                                      <item>
-                                      <widget class="QLabel" name="lb_OSC_Offset_CH2">
-                                       <property name="enabled">
-                                        <bool>false</bool>
+                                      <spacer name="verticalSpacer_6">
+                                       <property name="orientation">
+                                        <enum>Qt::Vertical</enum>
                                        </property>
-                                       <property name="minimumSize">
+                                       <property name="sizeHint" stdset="0">
                                         <size>
-                                         <width>120</width>
-                                         <height>35</height>
+                                         <width>20</width>
+                                         <height>40</height>
                                         </size>
                                        </property>
-                                       <property name="styleSheet">
-                                        <string notr="true">border: 0px;
-font: 18pt &quot;クレPro by 宁静之雨，微信公众号njzyshare&quot;;
-color: rgb(189, 147, 249);</string>
-                                       </property>
-                                       <property name="text">
-                                        <string>0.00V</string>
-                                       </property>
-                                       <property name="alignment">
-                                        <set>Qt::AlignCenter</set>
-                                       </property>
-                                      </widget>
+                                      </spacer>
                                      </item>
                                     </layout>
                                    </item>
@@ -4510,10 +4487,13 @@ color: rgb(189, 147, 249);</string>
                                         <bool>false</bool>
                                        </property>
                                        <property name="maximum">
-                                        <number>200</number>
+                                        <number>400</number>
                                        </property>
                                        <property name="pageStep">
                                         <number>10</number>
+                                       </property>
+                                       <property name="value">
+                                        <number>200</number>
                                        </property>
                                       </widget>
                                      </item>
@@ -4526,6 +4506,9 @@ color: rgb(189, 147, 249);</string>
                                         <bool>false</bool>
                                        </property>
                                        <property name="maximum">
+                                        <number>400</number>
+                                       </property>
+                                       <property name="value">
                                         <number>200</number>
                                        </property>
                                       </widget>
@@ -4884,7 +4867,7 @@ QPushButton
                              </layout>
                             </item>
                             <item>
-                             <widget class="QWidget" name="Chart_UART" native="true">
+                             <widget class="QChartView" name="Chart_UART" native="true">
                               <property name="minimumSize">
                                <size>
                                 <width>200</width>
@@ -4963,55 +4946,6 @@ QPushButton:pressed {
                               <layout class="QHBoxLayout" name="horizontalLayout_40">
                                <item>
                                 <layout class="QVBoxLayout" name="verticalLayout_12">
-                                 <item>
-                                  <layout class="QHBoxLayout" name="horizontalLayout_13">
-                                   <item>
-                                    <widget class="QLabel" name="lb_Port">
-                                     <property name="enabled">
-                                      <bool>false</bool>
-                                     </property>
-                                     <property name="minimumSize">
-                                      <size>
-                                       <width>120</width>
-                                       <height>35</height>
-                                      </size>
-                                     </property>
-                                     <property name="styleSheet">
-                                      <string notr="true">font: 14pt &quot;クレPro by 宁静之雨，微信公众号njzyshare&quot;;</string>
-                                     </property>
-                                     <property name="text">
-                                      <string>Serial Port</string>
-                                     </property>
-                                     <property name="alignment">
-                                      <set>Qt::AlignCenter</set>
-                                     </property>
-                                    </widget>
-                                   </item>
-                                   <item>
-                                    <widget class="QComboBox" name="com_Port">
-                                     <property name="minimumSize">
-                                      <size>
-                                       <width>120</width>
-                                       <height>35</height>
-                                      </size>
-                                     </property>
-                                     <property name="cursor">
-                                      <cursorShape>PointingHandCursor</cursorShape>
-                                     </property>
-                                     <property name="toolTip">
-                                      <string>端口选择</string>
-                                     </property>
-                                     <property name="styleSheet">
-                                      <string notr="true"> QComboBox QAbstractItemView{
-	background-color: rgb(33, 37, 43);
-    border-radius:5px 5px 5px 5px;
-	font-size:14px;
- }</string>
-                                     </property>
-                                    </widget>
-                                   </item>
-                                  </layout>
-                                 </item>
                                  <item>
                                   <layout class="QHBoxLayout" name="horizontalLayout_14">
                                    <item>
@@ -5503,7 +5437,7 @@ font: 14pt &quot;クレPro by 宁静之雨，微信公众号njzyshare&quot;;</st
                                     <item>
                                      <widget class="QTextEdit" name="te_UART_RecTerminal">
                                       <property name="enabled">
-                                       <bool>false</bool>
+                                       <bool>true</bool>
                                       </property>
                                       <property name="sizePolicy">
                                        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -7440,6 +7374,14 @@ font: 14pt &quot;クレPro by 宁静之雨，微信公众号njzyshare&quot;;</st
    </layout>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QChartView</class>
+   <extends>QWidget</extends>
+   <header>qchartview.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="resources.qrc"/>
  </resources>

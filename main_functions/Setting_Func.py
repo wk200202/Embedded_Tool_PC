@@ -37,11 +37,11 @@ class Setting_Manager(object):
     '''
     关于服务器线程的操作
     '''
-    def Server_start(self,OSC_thread):
+    def Server_start(self,OSC_thread,uart_thread):
         server_ip = self.ui.le_Device_IP.text()
         server_port = int(9090)
         self.ui.btn_Connect.setEnabled(False)
-        self.server = TCPServer(self.ui, server_ip, server_port,OSC_thread)
+        self.server = TCPServer(self.ui, server_ip, server_port,OSC_thread,uart_thread)
 
     def Server_stop(self):
         if self.server is not None:

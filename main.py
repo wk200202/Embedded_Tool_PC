@@ -5,6 +5,7 @@ from main_functions.Setting_Func import Setting_Manager
 from main_functions.Socket_Thread import TCPServer
 from main_functions.OSC_Func import OscillographWidget
 from main_functions.DDS_Func import DDS_Manager
+from main_functions.UART_Func import UART_Manager
 
 from modules import *
 from widgets import *
@@ -29,12 +30,15 @@ class MainWindow(QMainWindow):
 
         # 初始化OSC线程
         self.osc_thread = OscillographWidget(self.ui, widgets.widget_OSC_main, 2,self)
+        self.osc_thread.start_worker_thread()  # 启动示波器线程
+        # 初始化UART线程
+        self.uart_thread = UART_Manager(self.ui)
 
         Settings.ENABLE_CUSTOM_TITLE_BAR = True
 
         self.setWindowTitle("Embedded Tools")  # 设置窗口标题
         widgets.titleRightInfo.setText("Setting")  # 设置窗口描述
-        widgets.version.setText("V1.9.0")  # 设置版本号
+        widgets.version.setText("V2.0.0")  # 设置版本号
         # 设置UI功能
         UIFunctions.uiDefinitions(self)
         # 左侧菜单栏按钮
@@ -68,7 +72,7 @@ class MainWindow(QMainWindow):
 
     def Setting_Button_Bind(self):
         widgets.btn_Connect.clicked.connect(
-            lambda: Setting_Manager.Server_start(self, self.osc_thread))
+            lambda: Setting_Manager.Server_start(self, self.osc_thread, self.uart_thread))
         widgets.btn_Scan_WiFi.clicked.connect(
             lambda: Setting_Manager.Scan_WiFi(self))
         widgets.btn_Add_WiFi.clicked.connect(
@@ -111,27 +115,42 @@ class MainWindow(QMainWindow):
     '''
 
     def OSC_Button_Bind(self):
-        widgets.btn_OSC_FFT.clicked.connect(
-            lambda: OscillographWidget.FFTmode(self.osc_thread))
-        widgets.btn_OSC_CH1_EN.clicked.connect(
-            lambda: OscillographWidget.CH1_EN(self.osc_thread))
-        widgets.btn_OSC_CH2_EN.clicked.connect(
-            lambda: OscillographWidget.CH2_EN(self.osc_thread))
-        widgets.btn_Run_Stop.clicked.connect(
-            lambda: OscillographWidget.Run_Stop(self.osc_thread))
-        widgets.btn_Screenshot.clicked.connect(
-            lambda: OscillographWidget.Screenshot(self.osc_thread))
+        widgets.btn_OSC_FFT.clicked.connect(lambda: OscillographWidget.FFTmode(self.osc_thread))
+        widgets.btn_OSC_CH1_EN.clicked.connect(lambda: OscillographWidget.CH1_EN(self.osc_thread))
+        widgets.btn_OSC_CH2_EN.clicked.connect(lambda: OscillographWidget.CH2_EN(self.osc_thread))
+        widgets.btn_Run_Stop.clicked.connect(lambda: OscillographWidget.Run_Stop(self.osc_thread))
+        widgets.btn_Screenshot.clicked.connect( lambda: OscillographWidget.Screenshot(self.osc_thread))
 
-        widgets.dial_OSC_Vertical_CH1.valueChanged.connect(
-            lambda: OscillographWidget.setCH1_Vscale(self.osc_thread))
-        widgets.dial_OSC_Vertical_CH2.valueChanged.connect(
-            lambda: OscillographWidget.setCH2_Vscale(self.osc_thread))
-
+        widgets.dial_OSC_Horizontal.valueChanged.connect(lambda: OscillographWidget.setHorizontal(self.osc_thread))
+        widgets.dial_OSC_Vertical_CH1.valueChanged.connect(lambda: OscillographWidget.setCH1_Vscale(self.osc_thread))
+        widgets.dial_OSC_Vertical_CH2.valueChanged.connect(lambda: OscillographWidget.setCH2_Vscale(self.osc_thread))
+        widgets.dial_OSC_Offset_CH1.valueChanged.connect(lambda: OscillographWidget.setCH1_Offset(self.osc_thread))
+        widgets.dial_OSC_Offset_CH2.valueChanged.connect(lambda: OscillographWidget.setCH2_Offset(self.osc_thread))
     '''
     UART界面按钮绑定
+    Chart_UART      : UART波形图    QWidgt
+    com_Baudrate    : 波特率选择框  QComboBox
+    com_Check_bit   : 校验位选择框  QComboBox
+    com_Stop_bit   : 停止位选择框  QComboBox
+    btn_UART_ctrl   : 开启串口      QPushButton
+    btn_UART_auto   : 自动调整图表      QPushButton
+    
+    cb_Rec_HEX      : 十六进制显示    QCheckBox
+    btn_Rec_Clear   : 清空接收区      QPushButton
+    te_UART_RecTerminal: 接收区      QTextEdit
+    
+    cb_Send_HEX     : 十六进制发送    QCheckBox
+    btn_UART_Send   : 发送按钮       QPushButton
+    te_UART_SendTerminal: 发送区      QTextEdit
     '''
     def UART_Button_Bind(self):
-        pass
+        widgets.btn_UART_ctrl.clicked.connect( lambda: UART_Manager.UART_ctrl(self,self.server))
+        widgets.btn_UART_auto.clicked.connect(lambda: UART_Manager.UART_auto(self.uart_thread))
+        widgets.btn_Rec_Clear.clicked.connect(lambda: UART_Manager.Rec_Clear(self))
+        widgets.btn_UART_Send.clicked.connect(lambda: UART_Manager.UART_Send(self, self.server))
+
+        widgets.cb_Rec_HEX.stateChanged.connect(lambda: UART_Manager.Rec_HEX(self))
+        widgets.cb_Send_HEX.stateChanged.connect(lambda: UART_Manager.Send_HEX(self))
     '''
     DDS界面按钮绑定
     
@@ -196,7 +215,11 @@ class MainWindow(QMainWindow):
             UIFunctions.resetStyle(self, btnName)
             btn.setStyleSheet(UIFunctions.selectMenu(btn.styleSheet()))
             widgets.titleRightInfo.setText("Virtual OSC")  # 设置窗口描述
-            self.osc_thread.start_worker_thread()   # 启动示波器线程
+            try:
+                #发送打开示波器指令
+                self.server.send_message_to_client("OpenOSC")
+            except:
+                print("OSC Open Error,Server not connected")
 
         # SHOW UART PAGE
         if btnName == "btn_UART":
@@ -207,6 +230,11 @@ class MainWindow(QMainWindow):
             btn.setStyleSheet(UIFunctions.selectMenu(
                 btn.styleSheet()))  # SELECT MENU
             widgets.titleRightInfo.setText("Serial Port")  # 设置窗口描述
+            try:
+                #发送打开串口指令
+                self.server.send_message_to_client("OpenUART")
+            except:
+                print("UART Open Error,Server not connected")
 
         # SHOW DDS PAGE
         if btnName == "btn_DDS":
@@ -217,6 +245,11 @@ class MainWindow(QMainWindow):
             btn.setStyleSheet(UIFunctions.selectMenu(
                 btn.styleSheet()))  # SELECT MENU
             widgets.titleRightInfo.setText("DDS")  # 设置窗口描述
+            try:
+                #发送打开DDS指令
+                self.server.send_message_to_client("OpenDDS")
+            except:
+                print("DDS Open Error,Server not connected")
 
          # PRINT BTN NAME
         print(f'UI_Button "{btnName}" pressed!')
